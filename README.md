@@ -2,5 +2,6 @@
 
 Neural Network Project
 
-## David Capper
-## Jakub Dymarkowski
+David Capper
+
+Jakub Dymarkowski
