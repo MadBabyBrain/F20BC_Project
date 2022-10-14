@@ -118,16 +118,41 @@ class NeuralNetwork:
         pass
         
     def train(self, training_data):
-        for (input, expected_output) in zip(training_data[0], training_data[1]):
-            print(input, expected_output)
-            actual = self.eval(input)
-            total_error = cost_array(actual=actual, expected=expected_output)
-            for layer in range(len(self.layers_size) - 1, 0, -1):
-                print(layer)
-                # for weight in range()
-                pass
+        for (input_vec, expected_output) in zip(training_data[0], training_data[1]):
+            print(input_vec, expected_output)
+            actual = self.eval(input_vec)
+            # total_error = cost_array(actual=actual, expected=expected_output)
+            self.layer_outputs.insert(0, input_vec)
+            
+
+            for outnode in range(self.layers_size[len(self.layers_size) - 1]):
+                for end_layer in range(len(self.layers_size) - 1, 0, -1):
+                    for current_node in range(self.layers_size[end_layer - 1]):
+                        # print(outnode, end_layer - 1, current_node)
+                        print(self.weight_recursion([outnode, end_layer - 1, current_node], (actual[outnode], expected_output[outnode])))
+                        # self.bias_recursion()
+
+            del self.layer_outputs[0]
         pass
-    
+
+    def weight_recursion(self, l_data, data):
+        print(l_data, data, len(self.layers_size) - 1)
+        if l_data[1] == len(self.layers_size) - 2:
+            val = 1
+            val *= cost_derivative(data[0], data[1])
+            val *= activations_derivatives(self.activations[l_data[1]], self.weighted_outputs[l_data[1]][l_data[2]])
+            return val
+        else:
+            val = 1
+            val *= 1
+            val *= 1
+            l_data[1] += 1
+            return self.weight_recursion(l_data, data) * val
+        pass
+
+    def bias_recursion(self, s_layer):
+        pass
+
     def eval(self, input_vec):
         self.layer_outputs.insert(0, input_vec)
         for layer in range(len(self.layers_size) - 1):
@@ -146,7 +171,7 @@ class NeuralNetwork:
     
     
 def main():
-    n = NeuralNetwork(layers=[[3, 3, 3], [1, 1]])
+    n = NeuralNetwork(layers=[[1, 2, 3], [1, 1]])
     n.train([[[0, 0, 0], [0, 0, 1]], [[0, 0, 1], [0, 1, 0]]])
     n.eval([0, 0, 0])
     n.print()
