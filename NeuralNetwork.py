@@ -1,4 +1,3 @@
-from audioop import avg
 import math
 import random
 import numpy as np
@@ -121,11 +120,14 @@ class NeuralNetwork:
         for (input_vec, expected_output) in zip(training_data[0], training_data[1]):
             print(input_vec, expected_output)
             actual = self.eval(input_vec)
+            print(actual, expected_output)
             # total_error = cost_array(actual=actual, expected=expected_output)
             self.layer_outputs.insert(0, input_vec)
             
+            self.print()
 
             for outnode in range(self.layers_size[len(self.layers_size) - 1]):
+                print(outnode)
                 for end_layer in range(len(self.layers_size) - 1, 0, -1):
                     for current_node in range(self.layers_size[end_layer - 1]):
                         # print(outnode, end_layer - 1, current_node)
@@ -136,16 +138,18 @@ class NeuralNetwork:
         pass
 
     def weight_recursion(self, l_data, data):
-        print(l_data, data, len(self.layers_size) - 1)
+        print("a", l_data, data, len(self.layers_size) - 1)
         if l_data[1] == len(self.layers_size) - 2:
+            print("c", l_data, self.weighted_outputs[l_data[1]][l_data[2]])
             val = 1
             val *= cost_derivative(data[0], data[1])
             val *= activations_derivatives(self.activations[l_data[1]], self.weighted_outputs[l_data[1]][l_data[2]])
             return val
         else:
+            print("b", l_data, self.weights[l_data[1]][l_data[2]])
             val = 1
-            val *= 1
-            val *= 1
+            val *= self.weights[l_data[1]][l_data[2]][0]
+            val *= activations_derivatives(self.activations[l_data[1]], self.weighted_outputs[l_data[1]][l_data[2]])
             l_data[1] += 1
             return self.weight_recursion(l_data, data) * val
         pass
@@ -171,7 +175,7 @@ class NeuralNetwork:
     
     
 def main():
-    n = NeuralNetwork(layers=[[1, 2, 3], [1, 1]])
+    n = NeuralNetwork(layers=[[3, 3, 3], [1, 1]])
     n.train([[[0, 0, 0], [0, 0, 1]], [[0, 0, 1], [0, 1, 0]]])
     n.eval([0, 0, 0])
     n.print()
