@@ -83,25 +83,14 @@ class Network:
 
         for (input_vec, expected) in zip(training_data[0], training_data[1]):
             actual = self.f_prop(input_vec)
+            
+            output_error = expected - actual # 6.
+            tmp = np.array([output_error * self.l_outputs[2] * (1.0 - self.l_outputs[2])]) # 7.
+            self.weights[1] += self.l_rate * (tmp.T @ self.l_outputs[1]) # 8.
 
-            # output_error = expected - actual # 6.
-            # tmp = np.array([output_error * self.l_outputs[2] * (1.0 - self.l_outputs[2])]) # 7.
-            # self.weights[1] += self.l_rate * (tmp.T @ self.l_outputs[1]) # 8.
-
-            # hidden_error = self.weights[1][0].T @ np.array([output_error]).T # 9.
-            # tmp = np.array([hidden_error * self.l_outputs[1].T * (1.0 - self.l_outputs[1].T)]) # 10.
-            # self.weights[0] += self.l_rate * (tmp @ self.l_outputs[0]) # 11.
-
-            error = expected - actual
-
-            for layer in range(len(self.weights) - 1, 0, -1):
-                if (layer) % 2 == 0:
-
-                    pass
-                else:
-
-                    pass
-                pass
+            hidden_error = self.weights[1][0].T @ np.array([output_error]).T # 9.
+            tmp = np.array([hidden_error * self.l_outputs[1].T * (1.0 - self.l_outputs[1].T)]) # 10.
+            self.weights[0] += self.l_rate * (tmp @ self.l_outputs[0]) # 11.
             pass
         pass
 
@@ -113,7 +102,7 @@ class Network:
 
 
 def main():
-    n = Network([[4, 5, 4], [1, 1]], 0.01)
+    n = Network([[4, 20, 4], [1, 1]], 0.01)
     o1 = n.f_prop([1, 0, 0, 0])
     o2 = n.f_prop([0, 1, 0, 0])
     o3 = n.f_prop([0, 0, 1, 0])
@@ -124,7 +113,7 @@ def main():
     print(o4, np.argmax(o4, axis=0) + 1, [1, 0, 0, 0])
     print()
     # n.print()
-    val = 100000
+    val = 200000
     for x in range(val):
         n.b_prop([[[1,0,0,0], [0,1,0,0], [0,0,1,0], [0,0,0,1]], [[0,1,0,0], [0,0,1,0], [0,0,0,1], [1,0,0,0]]])
     o1 = n.f_prop([1, 0, 0, 0])
