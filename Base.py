@@ -1,6 +1,9 @@
+from cProfile import label
 import math
 import numpy as np
 import pandas as pd
+import matplotlib.pyplot as plt
+
 
 # =========================================== Activation on matrix =========================================== #
 
@@ -253,16 +256,16 @@ def main():
         for (s, i) in zip(ins, range(len(ins))):
             s = s.replace("\n", "")
             s = s.replace(",", "")
-            if i == 2 or i == 7:
+            if i == 1 or i == 7:
                 temp.append([float(i) for i in s.split()])
             else:
                 temp.append([int(i) for i in s.split()])
 
             if len(temp[i]) == 1:
                 temp[i] = temp[i][0]
-        input_layers = temp[1]
+        learning_rate = temp[1]
+        input_layers = temp[2]
         activations = temp[3]
-        learning_rate = temp[2]
         iterations = temp[4]
         epochs = temp[5]
         min_iterations = temp[6]
@@ -287,6 +290,8 @@ def main():
     end = int(int(len(training_data[0]) - 1) / batches)
     bsize = int(int(len(training_data[0]) - 1) / batches)
     
+    accuracy = []
+    
     finished = False
     # start training loop
     for epoch in range(epochs):
@@ -306,6 +311,14 @@ def main():
                 if (it % 10 == 0):
                     # print(start, '\t',  end, '\t', gsize)
                     print(it, '\t',  e, '\t', tempn.error)
+                    for (i, o) in zip(training_data[0], training_data[1]):
+                        out = tempn.f_prop(i).flatten()
+                        if (np.argmax(out, axis=0) + 1 == np.argmax(o, axis=0) + 1):
+                            correct += 1
+                    perc = correct / amount
+    
+                    correct = 0 # reset correct variable
+                    accuracy.append(perc * 100)
                 # if error is greater than 1*10^-7
                 if (e >= 0.0000001):
                     if e < tempn.error: # if error is smaller than temp network error
@@ -337,6 +350,44 @@ def main():
             pass
     perc = correct / amount
     print('Correct: ', str(perc * 100) + '%')
+    
+    file = open("./output.txt", "a")
+    file.write(''.join([str(a) + ', ' for a in accuracy]) + '\n')
+    file.close()
+    
+    # gdata = pd.DataFrame(dict(
+    #     Iterations = np.arange(len(accuracy)) * 10,
+    #     Accuracy = accuracy
+    # ))
+    # fig = px.line(gdata, x="Iterations", y="Accuracy", title="Accuracy of network against Dataset over iterations")
+    # fig.show()
+    
+    plt.plot(np.arange(len(accuracy)) * 10, accuracy, label="Accuracy")
+    plt.show()
+    
+    f = open("output.txt", "r")
+    acc = f.readlines()
+    accuracys = []
+    for j in range(len(acc)):
+        s = acc[j]
+        # print('a', s)
+        # print('b', len(s))
+        # for k in range(len(s)):
+            # st = s[k]
+        s = s.replace("\n", "")
+        s = s.replace(",", "")
+        # print('c', s)
+        accuracys.append([float(i) for i in s.split()])
+    # print(accuracys)
+    
+    for line in range(len(accuracys)):
+        # gdata2 = pd.DataFrame(dict(
+        #     Iterations = np.arange(len(accuracys[line])) * 10,
+        #     Accuracy = accuracys[line]
+        # ))
+        plt.plot(np.arange(len(accuracys[line])) * 10, accuracys[line])
+    plt.show()
+        
 
 
 
