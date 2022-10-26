@@ -211,8 +211,66 @@ def main():
         # add to training data to match with input data
         training_data[1].append(out)
     
-    # create two networks    
-    n = Network([[30, 30, 30, 30, 30, 2], [1, 1, 1, 1, 1]], 0.01)
+    input_layers = []
+    activation_values = [1, 2, 3]
+    activations = []
+    
+    # define network parameters
+    layers, learning_rate, iterations, epochs, min_iterations, min_error, batches, val = 0, 0, 0, 0, 0, 0, 0, 0
+    print("Parameters used during testing:")
+    print("\n", "Layers: 3\n", "Learning Rate: 0.01\n", "Nodes: 30, 20, 2\n", "Activations: 1, 1, 1\n", "Iterations: 100\n", "Epochs: 10\n", "Minimum Iterations: 200\n", "Minimum Error: 0.0001\n", "Batches: 10\n")
+    print("")
+    
+    print("If using a .txt file please layout as above ^^ description without headers, plese have file in current directory, named: NeuralNetwork_Inputs.txt. Example below")
+    print("\n", "3\n", "0.01\n", "30, 20, 2\n", "1, 1, 1\n", "100\n", "10\n", "200\n", "0.0001\n", "10\n")
+
+    if (int(input("Would you like to input from a text file? (1 if No, 0 if Yes):\n>> "))):
+        while (layers < 2): layers = int(input("How many layers will this network have? (default: 2)\n>> ") or 2)
+        while (learning_rate <= 0): learning_rate = float(input("What is the learning rate of this network? (default: 0.01)\n>> ") or  0.01)
+        print("1: Sigmoid\n2: Relu\n3: Tangent")
+        for l in range(layers):
+            while (val < 1):
+                val = int(input("How many nodes in layer {0}? (default: 1)\n>> ".format(l + 1)) or 1)
+                input_layers.append(val)
+            val = 0
+            while (val not in activation_values):
+                val = int(input("Which activation would you like for layer {0}? (default: 1)\n>> ".format(l + 1)) or 1)
+                activations.append(val)
+                print(val in activation_values)
+            val = 0
+            
+        # define training parameters
+        while (iterations <= 0): iterations = int(input("How many Iterations of training would you like? (default: 50)\n>> ") or 50)
+        while (epochs <= 0): epochs = int(input("How many Epochs would you like? (default: 10)\n>> ") or 10)
+        while (min_iterations <= 0): min_iterations = int(input("Minimum iterations of learning? (default: 200)\n>> ") or 200)
+        while (min_error <= 0): min_error = float(input("Minimum error of network? (default: 0.0005)\n>> ") or 0.0005)
+        
+        while (batches < 1): batches = int(input("How many Batches of data? (default: 1)\n>> ") or 1)
+    else:
+        f = open("NeuralNetwork_Inputs.txt", "r")
+        ins = f.readlines()
+        temp = []
+        for (s, i) in zip(ins, range(len(ins))):
+            s = s.replace("\n", "")
+            s = s.replace(",", "")
+            if i == 2 or i == 7:
+                temp.append([float(i) for i in s.split()])
+            else:
+                temp.append([int(i) for i in s.split()])
+
+            if len(temp[i]) == 1:
+                temp[i] = temp[i][0]
+        input_layers = temp[1]
+        activations = temp[3]
+        learning_rate = temp[2]
+        iterations = temp[4]
+        epochs = temp[5]
+        min_iterations = temp[6]
+        min_error = temp[7]
+        batches = temp[8]
+       
+    # create two networks
+    n = Network([input_layers, activations], learning_rate)
     tempn = Network([n.l_size, n.acts], n.l_rate)
 
     # calculate how many outputs the network has gotten correct with no training
@@ -225,47 +283,44 @@ def main():
     
     correct = 0 # reset correct variable
     
-    # define training parameters
-    iterations = 50
-    epochs = 10
-    min_iterations = 200
-    min_error = 0.0001
-    
-    # batch data
-    batches = 10
     start = 0
-    
-    if batches == 0: batches = 1
     end = int(int(len(training_data[0]) - 1) / batches)
     bsize = int(int(len(training_data[0]) - 1) / batches)
     
+    finished = False
     # start training loop
-    for x in range(iterations * epochs * batches * 1 + 1):
-        dat = [training_data[0][start:end], training_data[1][start:end]] # calculate training data based on batch data
-        e = n.b_prop(dat)[0] # back prop dat
-        
-        # update start and end of batch training array
-        start = end % (len(training_data[0]) - 1)
-        end = start + bsize
-        
-        if (x % 10 == 0):
-            # print(start, '\t',  end, '\t', gsize)
-            print(x, '\t',  e, '\t', tempn.error)
-        # if error is greater than 1*10^-7
-        if (e >= 0.0000001):
-            if e < tempn.error: # if error is smaller than temp network error
-                # copy current network parameters to temp network
-                tempn.error = n.error
-                tempn.weights = n.weights
-                tempn.biases = n.biases
-            # if error is below minimum error value and the network has been through the minimum number of iterations
-            if ((tempn.error < min_error) and (x > min_iterations)):
-                # break out of training loop
-                print("final", e, tempn.error)
-                break
-        elif (e < 0.0000001):
-            # create new network if error too low
-            n = Network([n.l_size, n.acts], n.l_rate)
+    for epoch in range(epochs):
+        if finished: break
+        for x in range(iterations):
+            if finished: break
+            for batch in range(batches):
+                if finished: break
+                dat = [training_data[0][start:end], training_data[1][start:end]] # calculate training data based on batch data
+                e = n.b_prop(dat)[0] # back prop dat
+                
+                # update start and end of batch training array
+                start = end % (len(training_data[0]) - 1)
+                end = start + bsize
+                
+                it = epoch * epochs * iterations + x * batches + batch
+                if (it % 10 == 0):
+                    # print(start, '\t',  end, '\t', gsize)
+                    print(it, '\t',  e, '\t', tempn.error)
+                # if error is greater than 1*10^-7
+                if (e >= 0.0000001):
+                    if e < tempn.error: # if error is smaller than temp network error
+                        # copy current network parameters to temp network
+                        tempn.error = n.error
+                        tempn.weights = n.weights
+                        tempn.biases = n.biases
+                    # if error is below minimum error value and the network has been through the minimum number of iterations
+                    if ((tempn.error < min_error) and (it > min_iterations)):
+                        # break out of training loop
+                        print("final", e, tempn.error)
+                        finished = True
+                elif (e < 0.0000001):
+                    # create new network if error too low
+                    n = Network([n.l_size, n.acts], n.l_rate)
     print(e, '\t', tempn.error)
     
     n.error = tempn.error
