@@ -1,9 +1,10 @@
-from cProfile import label
 import math
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+import datetime
 
+from pyparsing import WordStart
 
 # =========================================== Activation on matrix =========================================== #
 
@@ -31,7 +32,8 @@ def activations(act, val):
     acts = {
         1: sigmoid(val),
         2: relu(val),
-        3: tangent(val)
+        3: tangent(val),
+        4: leakyrelu(val)
     }
 
     return acts[act]
@@ -76,6 +78,9 @@ def relu(val):
 def tangent(val):
     return math.tanh(val)
 
+def leakyrelu(val):
+    return max(0.01 * val, val)
+
 def softmax(arr):
     r = np.exp(arr) / sum(np.exp(arr))
     return r
@@ -111,7 +116,7 @@ def diff_squared_derivative(actual, expected):
 class Network:
     def __init__(self, layers, learning_rate):
         # initialises all class variables
-        self.error = 100_000_000
+        self.accuracy = 0
         self.l_size = layers[0]
         self.acts = layers[1]
         self.weights = []
@@ -169,7 +174,8 @@ class Network:
             pass
             total_error += output_error # add output error to total error
         total_error = abs(sum(total_error)) # sum total error and make positive
-        self.error = total_error[0] # set networks error
+        self.accuracy = total_error[0] # set networks error
+        # self.l_rate = total_error[0] / 5
         return total_error # return total network error
 
     def print(self):
@@ -219,18 +225,20 @@ def main():
     activations = []
     
     # define network parameters
-    layers, learning_rate, iterations, epochs, min_iterations, min_error, batches, val = 0, 0, 0, 0, 0, 0, 0, 0
+    layers, learning_rate, iterations, epochs, min_iterations, target_accuracy, batches, val = 0, 0, 0, 0, 0, 0, 0, 0
     print("Parameters used during testing:")
-    print("\n", "Layers: 3\n", "Learning Rate: 0.01\n", "Nodes: 30, 20, 2\n", "Activations: 1, 1, 1\n", "Iterations: 100\n", "Epochs: 10\n", "Minimum Iterations: 200\n", "Minimum Error: 0.0001\n", "Batches: 10\n")
+    print("\n", "Layers: 3\n", "Learning Rate: 0.01\n", "Nodes: 30, 20, 2\n", "Activations: 1, 1, 1\n", "Iterations: 100\n", "Epochs: 10\n", "Minimum Iterations: 200\n", "Minimum accuracy: 0.95\n", "Batches: 10\n")
     print("")
     
     print("If using a .txt file please layout as above ^^ description without headers, plese have file in current directory, named: NeuralNetwork_Inputs.txt. Example below")
-    print("\n", "3\n", "0.01\n", "30, 20, 2\n", "1, 1, 1\n", "100\n", "10\n", "200\n", "0.0001\n", "10\n")
-
+    print("\n", "3\n", "0.01\n", "30, 20, 2\n", "1, 1, 1\n", "100\n", "10\n", "200\n", "0.95\n", "10\n")
+    
+    temp = []
+    
     if (int(input("Would you like to input from a text file? (1 if No, 0 if Yes):\n>> "))):
         while (layers < 2): layers = int(input("How many layers will this network have? (default: 2)\n>> ") or 2)
         while (learning_rate <= 0): learning_rate = float(input("What is the learning rate of this network? (default: 0.01)\n>> ") or  0.01)
-        print("1: Sigmoid\n2: Relu\n3: Tangent")
+        print("1: Sigmoid\n2: Relu\n3: Tangent\n4: LeakyRelu")
         for l in range(layers):
             while (val < 1):
                 val = int(input("How many nodes in layer {0}? (default: 1)\n>> ".format(l + 1)) or 1)
@@ -246,14 +254,15 @@ def main():
         while (iterations <= 0): iterations = int(input("How many Iterations of training would you like? (default: 50)\n>> ") or 50)
         while (epochs <= 0): epochs = int(input("How many Epochs would you like? (default: 10)\n>> ") or 10)
         while (min_iterations <= 0): min_iterations = int(input("Minimum iterations of learning? (default: 200)\n>> ") or 200)
-        while (min_error <= 0): min_error = float(input("Minimum error of network? (default: 0.0005)\n>> ") or 0.0005)
+        while (target_accuracy < 0 or target_accuracy > 1): target_accuracy = float(input("Minimum accuracy of network? (default: 0.95)\n>> ") or 1)
         
         while (batches < 1): batches = int(input("How many Batches of data? (default: 1)\n>> ") or 1)
     else:
-        f = open("NeuralNetwork_Inputs.txt", "r")
+        # f = open("NeuralNetwork_Inputs.txt", "r")
+        # f = open("output_2.txt", "r")
+        f = open(str(input("What is the name of the file you would like to read from?\n>> ") or "NeuralNetwork_Inputs.txt"), "r")
         ins = f.readlines()
-        temp = []
-        for (s, i) in zip(ins, range(len(ins))):
+        for (s, i) in zip(ins, range(9)):
             s = s.replace("\n", "")
             s = s.replace(",", "")
             if i == 1 or i == 7:
@@ -269,7 +278,7 @@ def main():
         iterations = temp[4]
         epochs = temp[5]
         min_iterations = temp[6]
-        min_error = temp[7]
+        target_accuracy = temp[7]
         batches = temp[8]
        
     # create two networks
@@ -291,7 +300,8 @@ def main():
     bsize = int(int(len(training_data[0]) - 1) / batches)
     
     accuracy = []
-    
+    loss = []
+    tstart = datetime.datetime.now()
     finished = False
     # start training loop
     for epoch in range(epochs):
@@ -303,40 +313,46 @@ def main():
                 dat = [training_data[0][start:end], training_data[1][start:end]] # calculate training data based on batch data
                 e = n.b_prop(dat)[0] # back prop dat
                 
+                for (i, o) in zip(training_data[0], training_data[1]):
+                    out = n.f_prop(i).flatten()
+                    if (np.argmax(out, axis=0) + 1 == np.argmax(o, axis=0) + 1):
+                        correct += 1
+                perc = correct / amount
+                correct = 0 # reset correct variable
+                
                 # update start and end of batch training array
                 start = end % (len(training_data[0]) - 1)
                 end = start + bsize
                 
                 it = epoch * epochs * iterations + x * batches + batch
                 if (it % 10 == 0):
-                    # print(start, '\t',  end, '\t', gsize)
-                    print(it, '\t',  e, '\t', tempn.error)
+                    print(it, '\t',  perc, '\t', tempn.accuracy, e)
+
                     for (i, o) in zip(training_data[0], training_data[1]):
                         out = tempn.f_prop(i).flatten()
                         if (np.argmax(out, axis=0) + 1 == np.argmax(o, axis=0) + 1):
                             correct += 1
-                    perc = correct / amount
-    
+                    perc2 = correct / amount
                     correct = 0 # reset correct variable
+                
+                    loss.append(0) if it == 0 else loss.append(e)
+                    accuracy.append(perc2 * 100)
+                if perc > tempn.accuracy: # if accuracy is smaller than temp network accuracy
+                    # copy current network parameters to temp network
+                    tempn.accuracy = perc
+                    tempn.weights = n.weights
+                    tempn.biases = n.biases
+                # if accuracy is below minimum accuracy value and the network has been through the minimum number of iterations
+                if ((tempn.accuracy >= target_accuracy) and (it > min_iterations)):
+                    # break out of training loop
+                    print("final", e, tempn.accuracy)
+                    finished = True
                     accuracy.append(perc * 100)
-                # if error is greater than 1*10^-7
-                if (e >= 0.0000001):
-                    if e < tempn.error: # if error is smaller than temp network error
-                        # copy current network parameters to temp network
-                        tempn.error = n.error
-                        tempn.weights = n.weights
-                        tempn.biases = n.biases
-                    # if error is below minimum error value and the network has been through the minimum number of iterations
-                    if ((tempn.error < min_error) and (it > min_iterations)):
-                        # break out of training loop
-                        print("final", e, tempn.error)
-                        finished = True
-                elif (e < 0.0000001):
-                    # create new network if error too low
-                    n = Network([n.l_size, n.acts], n.l_rate)
-    print(e, '\t', tempn.error)
-    
-    n.error = tempn.error
+    print(e, '\t', tempn.accuracy)
+    tend = datetime.datetime.now()
+    tdiff = tend - tstart
+    print(tdiff.seconds)
+    n.accuracy = tempn.accuracy
     n.weights = tempn.weights
     n.biases = tempn.biases
     
@@ -351,18 +367,35 @@ def main():
     perc = correct / amount
     print('Correct: ', str(perc * 100) + '%')
     
-    file = open("./output.txt", "a")
+    file = open("output.txt", "a")
     file.write(''.join([str(a) + ', ' for a in accuracy]) + '\n')
     file.close()
     
-    # gdata = pd.DataFrame(dict(
-    #     Iterations = np.arange(len(accuracy)) * 10,
-    #     Accuracy = accuracy
-    # ))
-    # fig = px.line(gdata, x="Iterations", y="Accuracy", title="Accuracy of network against Dataset over iterations")
-    # fig.show()
+    words = ["Layers: ", "Learning Rate: ", "Nodes: ", "Activations: ", "Iterations: ", "Epochs: ", "Minimum Iterations: ", "Minimum accuracy: ", "Batches: ", "Time: "]
+    temp.append(str(tdiff.seconds) + '\n')
+    file = open(str(input("Which file would you like to write the output to?\n>> ") or "output_2.txt"), "a")
+    for s in range(len(temp)):
+        if (s == 2 or s == 3):
+            temp[s] = '\n'.join([str(b) + ', ' for b in temp[s]]) + '\n'
+        else:
+            temp[s] = str(temp[s]) + '\n'
+        temp[s] = words[s] + temp[s]
+    file.writelines(temp)
+    file.close()
     
-    plt.plot(np.arange(len(accuracy)) * 10, accuracy, label="Accuracy")
+    # Current accuracy over iterations
+    plt.plot(np.arange(len(accuracy)) * 10, accuracy, label = "Accuracy")
+    plt.xlabel("Iterations")
+    plt.ylabel("Accuracy")
+    plt.legend()
+    plt.show()
+    
+    # current accuracy compared to loss over iterations
+    plt.plot(np.arange(len(loss)) * 10, loss, label = "Loss")
+    plt.plot(np.arange(len(accuracy)) * 10, [x / 100 for x in accuracy], label = "Accuracy")
+    plt.xlabel("Iterations")
+    # plt.ylabel("")
+    plt.legend()
     plt.show()
     
     f = open("output.txt", "r")
@@ -370,22 +403,14 @@ def main():
     accuracys = []
     for j in range(len(acc)):
         s = acc[j]
-        # print('a', s)
-        # print('b', len(s))
-        # for k in range(len(s)):
-            # st = s[k]
         s = s.replace("\n", "")
         s = s.replace(",", "")
-        # print('c', s)
         accuracys.append([float(i) for i in s.split()])
-    # print(accuracys)
     
+    # recent accuracys compared to each other over iterations
     for line in range(len(accuracys)):
-        # gdata2 = pd.DataFrame(dict(
-        #     Iterations = np.arange(len(accuracys[line])) * 10,
-        #     Accuracy = accuracys[line]
-        # ))
-        plt.plot(np.arange(len(accuracys[line])) * 10, accuracys[line])
+        plt.plot(np.arange(len(accuracys[line])) * 10, accuracys[line], label = "Line " + str(line))
+    plt.legend()
     plt.show()
         
 
